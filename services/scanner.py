@@ -1,0 +1,26 @@
+# from models.shortcut import Shortcut
+from pathlib import Path
+
+
+class ShortcutScanner:
+    COMMON_START_MENU = Path(r"C:\ProgramData\Microsoft\Windows\Start Menu\Programs")
+
+    USER_START_MENU = (
+        Path.home()
+        / "AppData"
+        / "Roaming"
+        / "Microsoft"
+        / "Windows"
+        / "Start Menu"
+        / "Programs"
+    )
+
+    def scan_common_start_menu(self) -> list[Path]:
+        return list(self.COMMON_START_MENU.rglob("*.lnk"))
+
+    def scan_user_start_menu(self) -> list[Path]:
+        return list(self.USER_START_MENU.rglob("*.lnk"))
+
+    def scan_all_start_menus(self) -> list[Path]:
+
+        return self.scan_common_start_menu() + self.scan_user_start_menu()
