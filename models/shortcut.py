@@ -9,7 +9,7 @@ class StartFolder(Enum):
 
 @dataclass
 class Shortcut:
-    uuid: str
+    # uuid: str
     name: str
     file_path: str
     extension: str
