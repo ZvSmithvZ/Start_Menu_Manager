@@ -1,3 +1,4 @@
+from models.shortcut import Shortcut
 from services.scanner import ShortcutScanner
 from services.shortcut_reader import ShortcutReader
 
@@ -9,7 +10,7 @@ class ShortcutManager:
     def add_shortcut(self, shortcut):
         self.shortcuts.append(shortcut)
 
-    def load_shortcuts(self):
+    def load_shortcuts(self) -> list[Shortcut]:
         self.shortcuts = []
         shortcut_path_scanner = ShortcutScanner()
         all_scanned_paths = shortcut_path_scanner.scan_all_start_menus()
@@ -17,11 +18,13 @@ class ShortcutManager:
         shortcut_reader = ShortcutReader()
         for path, start_folder in all_scanned_paths:
             self.add_shortcut(shortcut_reader.read_shortcut(path, start_folder))
+
         return self.shortcuts
 
-    def find_duplicates(self):
-        shortcut_targets = {}
-        possible_duplicates = {}
+    def find_duplicates(self) -> dict[tuple[str, str], list[Shortcut]]:
+        shortcut_targets: dict[tuple[str, str], list[Shortcut]] = {}
+        possible_duplicates: dict[tuple[str, str], list[Shortcut]] = {}
+
         for shortcut in self.shortcuts:
             shortcut.is_duplicate = False
             duplicate_key = (shortcut.target_path, shortcut.args)
@@ -34,4 +37,13 @@ class ShortcutManager:
 
                 for shortcut in value:
                     shortcut.is_duplicate = True
+
         return possible_duplicates
+
+    def find_brokens(self):
+        broken_shortcuts = []
+        for shortcut in self.shortcuts:
+            if shortcut.is_broken:
+                broken_shortcuts.append(shortcut)
+        print(broken_shortcuts)
+        return broken_shortcuts
