@@ -1,11 +1,13 @@
 import subprocess
+from datetime import datetime
 
 from PySide6.QtCore import QFileInfo, Qt
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QAction, QColor
 from PySide6.QtWidgets import (
     QButtonGroup,
     QFileIconProvider,
     QHBoxLayout,
+    QInputDialog,
     QMainWindow,
     QMenu,
     QPushButton,
@@ -20,11 +22,13 @@ from models.ui_table import TableView
 
 class MainWindow(QMainWindow):
 
-    def __init__(self, shortcut_manager):
+    def __init__(self, shortcut_manager, backup_manager):
         super().__init__()
         self.table_view = TableView.ALL_VIEW
 
         self.shortcut_manager = shortcut_manager
+        self.backup_manager = backup_manager
+
         self.icon_cache = {}
 
         self.current_shortcuts = []
@@ -41,6 +45,8 @@ class MainWindow(QMainWindow):
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
+
+        self.create_menu_bar()
 
         # vertical stacking system
         layout = QVBoxLayout()
@@ -82,10 +88,12 @@ class MainWindow(QMainWindow):
         self.view_group.addButton(self.view_brokens_button)
         button_layout.addWidget(self.view_brokens_button)
 
-        self.show_windows_entries_button = QPushButton("View System Shortcuts")
-        self.show_windows_entries_button.setCheckable(True)
-        button_layout.addWidget(self.show_windows_entries_button)
-        self.show_windows_entries_button.clicked.connect(self.show_windows_shortcuts)
+        self.show_windows_shortcuts_button = QPushButton("View System Shortcuts")
+        self.show_windows_shortcuts_button.clicked.connect(self.show_windows_shortcuts)
+
+        self.show_windows_shortcuts_button.setCheckable(True)
+        self.view_group.addButton(self.show_windows_shortcuts_button)
+        button_layout.addWidget(self.show_windows_shortcuts_button)
 
         self.view_group.setExclusive(True)
         # end of view group
@@ -241,6 +249,52 @@ class MainWindow(QMainWindow):
 
     def auto_size_columns(self):
         self.table.resizeColumnsToContents()
+
+    def create_auto_backup(self):
+        backup_path = self.backup_manager.save_backup(
+            self.shortcut_manager.shortcuts, False, None
+        )
+
+        print(f"Backup saved: {backup_path}")
+
+    def create_backup(self):
+        default_name = f"start_menu_shortcuts_backup_{datetime.now().strftime('%Y-%m-%d_%H-%M')}"  # noqa: DTZ005
+
+        filename, ok = QInputDialog.getText(
+            self, "Create Backup", "Backup name:", text=default_name
+        )
+
+        if ok:
+            backup_path = self.backup_manager.save_backup(
+                self.shortcut_manager.shortcuts, True, filename
+            )
+
+            print(f"Backup saved: {backup_path}")
+
+    def restore_backup(self):
+        print("Restoring backup")
+
+    def create_menu_bar(self):
+
+        menu_bar = self.menuBar()
+
+        file_menu = menu_bar.addMenu("File")
+
+        create_backup_action = QAction("Create Backup", self)
+        create_backup_action.triggered.connect(self.create_backup)
+
+        restore_backup_action = QAction("Restore Backup", self)
+        restore_backup_action.triggered.connect(self.restore_backup)
+
+        file_menu.addAction(create_backup_action)
+        file_menu.addAction(restore_backup_action)
+
+        file_menu.addSeparator()
+
+        exit_action = QAction("Exit", self)
+        exit_action.triggered.connect(self.close)
+
+        file_menu.addAction(exit_action)
 
     def show_context_menu(self, position):
         menu = QMenu()

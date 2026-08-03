@@ -54,3 +54,6 @@ class ShortcutManager:
             if shortcut.is_windows_entry:
                 windows_shortcuts.append(shortcut)
         return windows_shortcuts
+
+    def save_shortcuts(self):
+        pass
