@@ -82,12 +82,13 @@ class MainWindow(QMainWindow):
         self.view_group.addButton(self.view_brokens_button)
         button_layout.addWidget(self.view_brokens_button)
 
-        self.view_group.setExclusive(True)
-        # end of view group
-
-        self.show_windows_entries_button = QPushButton("Show Windows Entries")
+        self.show_windows_entries_button = QPushButton("View System Shortcuts")
         self.show_windows_entries_button.setCheckable(True)
         button_layout.addWidget(self.show_windows_entries_button)
+        self.show_windows_entries_button.clicked.connect(self.show_windows_shortcuts)
+
+        self.view_group.setExclusive(True)
+        # end of view group
 
         # adding button row to main layout
 
@@ -119,8 +120,7 @@ class MainWindow(QMainWindow):
     def scan_shortcuts(self):
 
         self.current_shortcuts = self.shortcut_manager.load_shortcuts()
-        self.refresh_duplicates()
-        self.refresh_brokens()
+        self.refresh_all_shortcuts()
 
         if self.table_view == TableView.ALL_VIEW:
             self.populate_table(self.current_shortcuts)
@@ -128,6 +128,13 @@ class MainWindow(QMainWindow):
             self.populate_table(self.duplicate_shortcuts)
         elif self.table_view == TableView.BROKE_VIEW:
             self.populate_table(self.broken_shortcuts)
+        elif self.table_view == TableView.WIN_VIEW:
+            self.populate_table(self.windows_shortcuts)
+
+    def refresh_all_shortcuts(self):
+        self.refresh_duplicates()
+        self.refresh_brokens()
+        self.refresh_windows_shortcuts()
 
     def refresh_duplicates(self):
         self.duplicate_shortcuts = []
@@ -137,6 +144,9 @@ class MainWindow(QMainWindow):
 
     def refresh_brokens(self):
         self.broken_shortcuts = self.shortcut_manager.find_brokens()
+
+    def refresh_windows_shortcuts(self):
+        self.windows_shortcuts = self.shortcut_manager.find_windows_entries()
 
     def show_all_shortcuts(self):
         self.populate_table(self.current_shortcuts)
@@ -149,6 +159,10 @@ class MainWindow(QMainWindow):
     def show_broken_shortcuts(self):
         self.populate_table(self.broken_shortcuts)
         self.table_view = TableView.BROKE_VIEW
+
+    def show_windows_shortcuts(self):
+        self.populate_table(self.windows_shortcuts)
+        self.table_view = TableView.WIN_VIEW
 
     def populate_table(self, shortcuts):
 

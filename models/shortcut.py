@@ -20,3 +20,4 @@ class Shortcut:
     start_folder: StartFolder
     is_duplicate: bool
     is_selected: bool
+    is_windows_entry: bool

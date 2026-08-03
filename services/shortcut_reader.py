@@ -22,4 +22,5 @@ class ShortcutReader:
             start_folder=start_folder,
             is_duplicate=False,
             is_selected=False,
+            is_windows_entry=shortcut.TargetPath.startswith(r"C:\Windows"),
         )

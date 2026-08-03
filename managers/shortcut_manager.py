@@ -47,3 +47,10 @@ class ShortcutManager:
                 broken_shortcuts.append(shortcut)
         print(broken_shortcuts)
         return broken_shortcuts
+
+    def find_windows_entries(self):
+        windows_shortcuts = []
+        for shortcut in self.shortcuts:
+            if shortcut.is_windows_entry:
+                windows_shortcuts.append(shortcut)
+        return windows_shortcuts
