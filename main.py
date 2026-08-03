@@ -11,9 +11,8 @@ manager = ShortcutManager()
 app = QApplication([])
 window = MainWindow(manager)
 
+
 window.show()
-app.exec()
-
-
-# manager.load_shortcuts()
 # manager.find_duplicates()
+# manager.load_shortcuts()
+app.exec()

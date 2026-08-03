@@ -10,6 +10,7 @@ class ShortcutManager:
         self.shortcuts.append(shortcut)
 
     def load_shortcuts(self):
+        self.shortcuts = []
         shortcut_path_scanner = ShortcutScanner()
         all_scanned_paths = shortcut_path_scanner.scan_all_start_menus()
         # all_scanned_paths = shortcut_path_scanner.scan_user_start_menu()
