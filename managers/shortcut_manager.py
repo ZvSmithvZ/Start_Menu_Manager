@@ -16,14 +16,15 @@ class ShortcutManager:
         shortcut_reader = ShortcutReader()
         for path, start_folder in all_scanned_paths:
             self.add_shortcut(shortcut_reader.read_shortcut(path, start_folder))
+        return self.shortcuts
 
     def find_duplicates(self):
         shortcut_targets = {}
         possible_duplicates = {}
         for shortcut in self.shortcuts:
             shortcut.is_duplicate = False
-            key = (shortcut.target_path, shortcut.args)
-            shortcut_targets.setdefault(key, []).append(shortcut)
+            duplicate_key = (shortcut.target_path, shortcut.args)
+            shortcut_targets.setdefault(duplicate_key, []).append(shortcut)
 
         for key, value in shortcut_targets.items():
             if len(value) > 1:
