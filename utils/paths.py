@@ -8,6 +8,6 @@ SETTINGS_FILE = DATA_DIR / "settings.json"
 
 BACKUP_DIR = DATA_DIR / "backups"
 
-AUTO_BACKUP_DIR = DATA_DIR / "backups" / "automatic_backups"
+MANUAL_BACKUP_DIR = BACKUP_DIR / "manual_backups"
 
-# BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+AUTO_BACKUP_DIR = BACKUP_DIR / "automatic_backups"

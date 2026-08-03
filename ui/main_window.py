@@ -1,5 +1,6 @@
 import subprocess
 from datetime import datetime
+from pathlib import Path
 
 from PySide6.QtCore import QFileInfo, Qt
 from PySide6.QtGui import QAction, QColor
@@ -7,9 +8,12 @@ from PySide6.QtWidgets import (
     QButtonGroup,
     QFileIconProvider,
     QHBoxLayout,
+    QHeaderView,
     QInputDialog,
+    QLineEdit,
     QMainWindow,
     QMenu,
+    QMessageBox,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -17,6 +21,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from models.shortcut import Shortcut
 from models.ui_table import TableView
 
 
@@ -52,16 +57,28 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout()
         central_widget.setLayout(layout)
 
-        # buttons
+        # buttons and search bar area
         button_layout = QHBoxLayout()
 
+        # search bar
+        self.search_box = QLineEdit()
+        self.search_box.setPlaceholderText("Search shortcuts...")
+        self.search_box.textChanged.connect(self.filter_table)
+
+        button_layout.addWidget(self.search_box)
+
+        # start of horizontal buttons
         self.scan_button = QPushButton("Refresh")
         self.scan_button.clicked.connect(self.scan_shortcuts)
         button_layout.addWidget(self.scan_button)
 
-        self.auto_size_columns_button = QPushButton("Auto Size Columns")
-        self.auto_size_columns_button.clicked.connect(self.auto_size_columns)
-        button_layout.addWidget(self.auto_size_columns_button)
+        self.fit_data_button = QPushButton("Fit Data")
+        self.fit_data_button.clicked.connect(self.fit_data)
+        button_layout.addWidget(self.fit_data_button)
+
+        self.fit_columns_button = QPushButton("Fit Columns")
+        self.fit_columns_button.clicked.connect(self.fit_columns)
+        button_layout.addWidget(self.fit_columns_button)
 
         # --grouped view buttons
         self.view_group = QButtonGroup(self)
@@ -119,8 +136,17 @@ class MainWindow(QMainWindow):
         self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.show_context_menu)
 
+        self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+
+        header = self.table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+
         # disabling ability to edit info in the table
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+
+        # sorting by clicking headers
+        self.table.setSortingEnabled(True)
+        self.table.horizontalHeader().setSortIndicatorShown(True)
 
         # initially called to populate the table
         self.scan_shortcuts()
@@ -173,6 +199,8 @@ class MainWindow(QMainWindow):
         self.table_view = TableView.WIN_VIEW
 
     def populate_table(self, shortcuts):
+
+        self.table.setSortingEnabled(False)
 
         self.table.setUpdatesEnabled(False)
         self.table.clearContents()
@@ -246,9 +274,44 @@ class MainWindow(QMainWindow):
                         cell.setBackground(self.duplicate_color)
 
         self.table.setUpdatesEnabled(True)
+        self.table.setSortingEnabled(True)
 
-    def auto_size_columns(self):
+    def filter_table(self, text: str):
+        text = text.lower()
+
+        for row in range(self.table.rowCount()):
+            match = False
+
+            for column in range(self.table.columnCount()):
+                item = self.table.item(row, column)
+
+                if item and text in item.text().lower():
+                    match = True
+                    break
+
+            self.table.setRowHidden(row, not match)
+
+    def fit_data(self):
         self.table.resizeColumnsToContents()
+
+    def fit_columns(self):
+        self.table.resizeColumnsToContents()
+        self.table.viewport().update()
+
+    def get_displayed_shortcuts(self) -> list[Shortcut]:
+        if self.table_view == TableView.ALL_VIEW:
+            return self.current_shortcuts
+
+        elif self.table_view == TableView.DUP_VIEW:
+            return self.duplicate_shortcuts
+
+        elif self.table_view == TableView.BROKE_VIEW:
+            return self.broken_shortcuts
+
+        elif self.table_view == TableView.WIN_VIEW:
+            return self.windows_shortcuts
+
+        return []
 
     def create_auto_backup(self):
         backup_path = self.backup_manager.save_backup(
@@ -272,7 +335,42 @@ class MainWindow(QMainWindow):
             print(f"Backup saved: {backup_path}")
 
     def restore_backup(self):
-        print("Restoring backup")
+
+        backups = self.backup_manager.get_backups()
+        if not backups:
+            return
+
+        backup_names = [f"{backup.parent.name}: {backup.name}" for backup in backups]
+
+        selected_name, ok = QInputDialog.getItem(
+            self,
+            "Restore Backup",
+            "Choose a backup:",
+            backup_names,
+            0,
+            False,
+        )
+
+        if not ok:
+            return
+
+        # auto_backup on importing a file
+        self.backup_manager.save_backup(self.shortcut_manager.shortcuts, False, None)
+
+        backup_lookup = {
+            f"{backup.parent.name}: {backup.name}": backup for backup in backups
+        }
+        selected_path = backup_lookup[selected_name]
+
+        restored_shortcuts = self.backup_manager.load_backup(selected_path)
+
+        self.shortcut_manager.restore_shortcuts(restored_shortcuts)
+
+        self.current_shortcuts = self.shortcut_manager.shortcuts
+
+        self.refresh_all_shortcuts()
+
+        self.populate_table(self.current_shortcuts)
 
     def create_menu_bar(self):
 
@@ -299,20 +397,61 @@ class MainWindow(QMainWindow):
     def show_context_menu(self, position):
         menu = QMenu()
 
-        # getting the shortcut of the row to modify
         row = self.table.rowAt(position.y())
+
         if row < 0:
             return
 
-        shortcut = self.current_shortcuts[row]
+        shortcuts = self.get_displayed_shortcuts()
+        shortcut = shortcuts[row]
 
         # open location menu entry
         open_location_action = menu.addAction("Open Shortcut Location")
         open_location_action.triggered.connect(
             lambda: self.open_shortcut_location(shortcut)
         )
+        open_target_action = menu.addAction("Open Target Location")
+        open_target_action.triggered.connect(
+            lambda: self.open_shortcut_target(shortcut)
+        )
+
+        menu.addSeparator()
+
+        edit_action = menu.addAction("Edit Shortcut")
+        edit_action.triggered.connect(lambda: self.edit_shortcut(shortcut))
+
+        menu.addSeparator()
+
+        delete_action = menu.addAction("Delete Shortcut")
+        delete_action.triggered.connect(lambda: self.delete_shortcut(shortcut))
 
         menu.exec(self.table.viewport().mapToGlobal(position))
 
     def open_shortcut_location(self, shortcut):
         subprocess.run(["explorer", "/select,", shortcut.file_path])  # noqa: PLW1510
+
+    def open_shortcut_target(self, shortcut: Shortcut):
+        subprocess.Popen(["explorer", "/select,", shortcut.target_path])
+
+    def edit_shortcut(self, shortcut):
+        pass
+
+    def delete_shortcut(self, shortcut: Shortcut):
+
+        shortcut_path = Path(shortcut.file_path)
+
+        if shortcut_path.suffix.lower() != ".lnk":
+            return
+
+        answer = QMessageBox.question(
+            self,
+            "Delete Shortcut",
+            f"Delete {shortcut.name}?",
+        )
+
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+
+        shortcut_path.unlink()
+
+        self.scan_shortcuts()

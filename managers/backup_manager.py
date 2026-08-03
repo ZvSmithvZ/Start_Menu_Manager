@@ -4,12 +4,13 @@ from pathlib import Path
 
 from models.shortcut import Shortcut
 from services.shortcut_serializer import ShortcutSerializer
-from utils.paths import AUTO_BACKUP_DIR, BACKUP_DIR
+from utils.paths import AUTO_BACKUP_DIR, BACKUP_DIR, MANUAL_BACKUP_DIR
 
 
 class BackupManager:
     def __init__(self, serializer: ShortcutSerializer):
         BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+        MANUAL_BACKUP_DIR.mkdir(parents=True, exist_ok=True)
         AUTO_BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
         self.serializer = serializer
@@ -33,7 +34,7 @@ class BackupManager:
             backup_name += ".json"
 
         if manual:
-            backup_path = BACKUP_DIR / backup_name
+            backup_path = MANUAL_BACKUP_DIR / backup_name
 
         else:
             backup_path = AUTO_BACKUP_DIR / backup_name
@@ -48,7 +49,9 @@ class BackupManager:
         return backup_path
 
     def get_backups(self):
-        return list(BACKUP_DIR.glob("*.json"))
+        return list(MANUAL_BACKUP_DIR.glob("*.json")) + list(
+            AUTO_BACKUP_DIR.glob("*.json")
+        )
 
     def load_backup(self, backup_path: Path) -> list[Shortcut]:
 

@@ -27,4 +27,5 @@ class ShortcutSerializer:
             is_duplicate=False,
             is_selected=False,
             is_windows_entry=False,
+            is_hidden=False,
         )

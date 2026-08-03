@@ -21,3 +21,4 @@ class Shortcut:
     is_duplicate: bool
     is_selected: bool
     is_windows_entry: bool
+    is_hidden: bool

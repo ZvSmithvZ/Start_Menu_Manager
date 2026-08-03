@@ -23,4 +23,5 @@ class ShortcutReader:
             is_duplicate=False,
             is_selected=False,
             is_windows_entry=shortcut.TargetPath.startswith(r"C:\Windows"),
+            is_hidden=False,
         )
