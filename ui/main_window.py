@@ -33,6 +33,7 @@ class MainWindow(QMainWindow):
 
         self.shortcut_manager = shortcut_manager
         self.backup_manager = backup_manager
+        self.auto_fit_enabled = True
 
         self.icon_cache = {}
 
@@ -76,9 +77,9 @@ class MainWindow(QMainWindow):
         self.fit_data_button.clicked.connect(self.fit_data)
         button_layout.addWidget(self.fit_data_button)
 
-        self.fit_columns_button = QPushButton("Fit Columns")
-        self.fit_columns_button.clicked.connect(self.fit_columns)
-        button_layout.addWidget(self.fit_columns_button)
+        self.toggle_auto_fit_button = QPushButton("Toggle Auto Fit")
+        self.toggle_auto_fit_button.clicked.connect(self.toggle_auto_fit)
+        button_layout.addWidget(self.toggle_auto_fit_button)
 
         # --grouped view buttons
         self.view_group = QButtonGroup(self)
@@ -116,13 +117,13 @@ class MainWindow(QMainWindow):
         # end of view group
 
         # adding button row to main layout
-
         layout.addLayout(button_layout)
 
         # container
         self.table = QTableWidget()
         layout.addWidget(self.table)
 
+        # setting highlight row color to light blue
         self.table.setStyleSheet("""
             QTableWidget::item:selected {
                 background-color: #3399ff;
@@ -130,16 +131,15 @@ class MainWindow(QMainWindow):
             }
         """)
 
+        # setting the selection behavior to highlight the whole row
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
 
+        # Context menu policy set to custom
         self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.show_context_menu)
 
         self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-
-        header = self.table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
 
         # disabling ability to edit info in the table
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -222,6 +222,17 @@ class MainWindow(QMainWindow):
             ]
         )
 
+        header = self.table.horizontalHeader()
+
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
+        self.table.setColumnWidth(0, 35)
+
+        for column in [1, 2, 4, 5]:
+            header.setSectionResizeMode(column, QHeaderView.ResizeMode.Stretch)
+
+        for column in [3, 6, 7, 8]:
+            header.setSectionResizeMode(column, QHeaderView.ResizeMode.Fixed)
+
         for row, shortcut in enumerate(shortcuts):
 
             shortcut_status = "Broken" if shortcut.is_broken else "Working"
@@ -276,6 +287,27 @@ class MainWindow(QMainWindow):
         self.table.setUpdatesEnabled(True)
         self.table.setSortingEnabled(True)
 
+    def fit_data(self):
+        self.table.resizeColumnsToContents()
+
+    # def fit_columns(self):
+    #     self.table.resizeColumnsToContents()
+    #     self.table.viewport().update()
+
+    def toggle_auto_fit(self):
+        self.auto_fit_enabled = not self.auto_fit_enabled
+
+        header = self.table.horizontalHeader()
+
+        mode = (
+            QHeaderView.ResizeMode.Stretch
+            if self.auto_fit_enabled
+            else QHeaderView.ResizeMode.Interactive
+        )
+
+        for column in [1, 2, 3, 4, 5]:
+            header.setSectionResizeMode(column, mode)
+
     def filter_table(self, text: str):
         text = text.lower()
 
@@ -290,13 +322,6 @@ class MainWindow(QMainWindow):
                     break
 
             self.table.setRowHidden(row, not match)
-
-    def fit_data(self):
-        self.table.resizeColumnsToContents()
-
-    def fit_columns(self):
-        self.table.resizeColumnsToContents()
-        self.table.viewport().update()
 
     def get_displayed_shortcuts(self) -> list[Shortcut]:
         if self.table_view == TableView.ALL_VIEW:
