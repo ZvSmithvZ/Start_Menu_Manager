@@ -33,6 +33,7 @@ class MainWindow(QMainWindow):
 
         self.shortcut_manager = shortcut_manager
         self.backup_manager = backup_manager
+
         self.auto_fit_enabled = True
 
         self.icon_cache = {}
@@ -224,14 +225,25 @@ class MainWindow(QMainWindow):
 
         header = self.table.horizontalHeader()
 
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
-        self.table.setColumnWidth(0, 35)
+        if self.auto_fit_enabled:
 
-        for column in [1, 2, 4, 5]:
-            header.setSectionResizeMode(column, QHeaderView.ResizeMode.Stretch)
+            header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
+            self.table.setColumnWidth(0, 35)
 
-        for column in [3, 6, 7, 8]:
-            header.setSectionResizeMode(column, QHeaderView.ResizeMode.Fixed)
+            for column in [1, 2, 4, 5]:
+                header.setSectionResizeMode(column, QHeaderView.ResizeMode.Stretch)
+
+            for column in [3, 6, 7, 8]:
+                header.setSectionResizeMode(column, QHeaderView.ResizeMode.Fixed)
+
+        else:
+            header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
+
+            for column in [1, 2, 4, 5]:
+                header.setSectionResizeMode(column, QHeaderView.ResizeMode.Interactive)
+
+            for column in [3, 6, 7, 8]:
+                header.setSectionResizeMode(column, QHeaderView.ResizeMode.Interactive)
 
         for row, shortcut in enumerate(shortcuts):
 
@@ -290,23 +302,34 @@ class MainWindow(QMainWindow):
     def fit_data(self):
         self.table.resizeColumnsToContents()
 
-    # def fit_columns(self):
-    #     self.table.resizeColumnsToContents()
-    #     self.table.viewport().update()
-
     def toggle_auto_fit(self):
         self.auto_fit_enabled = not self.auto_fit_enabled
 
         header = self.table.horizontalHeader()
 
-        mode = (
-            QHeaderView.ResizeMode.Stretch
-            if self.auto_fit_enabled
-            else QHeaderView.ResizeMode.Interactive
-        )
+        if self.auto_fit_enabled:
 
-        for column in [1, 2, 3, 4, 5]:
-            header.setSectionResizeMode(column, mode)
+            header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
+            self.table.setColumnWidth(0, 35)
+
+            for column in [1, 2, 4, 5]:
+                header.setSectionResizeMode(column, QHeaderView.ResizeMode.Stretch)
+
+            for column in [3, 6, 7, 8]:
+                header.setSectionResizeMode(column, QHeaderView.ResizeMode.Fixed)
+
+            self.toggle_auto_fit_action.setChecked(True)
+
+        else:
+            header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
+
+            for column in [1, 2, 4, 5]:
+                header.setSectionResizeMode(column, QHeaderView.ResizeMode.Interactive)
+
+            for column in [3, 6, 7, 8]:
+                header.setSectionResizeMode(column, QHeaderView.ResizeMode.Interactive)
+
+            self.toggle_auto_fit_action.setChecked(False)
 
     def filter_table(self, text: str):
         text = text.lower()
@@ -405,11 +428,10 @@ class MainWindow(QMainWindow):
 
         create_backup_action = QAction("Create Backup", self)
         create_backup_action.triggered.connect(self.create_backup)
+        file_menu.addAction(create_backup_action)
 
         restore_backup_action = QAction("Restore Backup", self)
         restore_backup_action.triggered.connect(self.restore_backup)
-
-        file_menu.addAction(create_backup_action)
         file_menu.addAction(restore_backup_action)
 
         file_menu.addSeparator()
@@ -418,6 +440,17 @@ class MainWindow(QMainWindow):
         exit_action.triggered.connect(self.close)
 
         file_menu.addAction(exit_action)
+
+        self.tools_menu = menu_bar.addMenu("Tools")
+
+        self.toggle_auto_fit_action = QAction("Auto Fit Column Widths to Window", self)
+        self.toggle_auto_fit_action.triggered.connect(self.toggle_auto_fit)
+        self.tools_menu.addAction(self.toggle_auto_fit_action)
+        self.toggle_auto_fit_action.setCheckable(True)
+        if self.auto_fit_enabled:
+            self.toggle_auto_fit_action.setChecked(True)
+        else:
+            self.toggle_auto_fit_action.setChecked(False)
 
     def show_context_menu(self, position):
         menu = QMenu()
