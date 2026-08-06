@@ -14,10 +14,11 @@ class Shortcut:
     file_path: str
     extension: str
     target_path: str
-    icon: str
+    icon_path: str
     args: str
     is_broken: bool
     start_folder: StartFolder
+    working_dir: str
     is_duplicate: bool
     is_selected: bool
     is_windows_entry: bool

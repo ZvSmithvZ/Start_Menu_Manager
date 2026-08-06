@@ -9,7 +9,7 @@ class ShortcutSerializer:
             "file_path": shortcut.file_path,
             "target_path": shortcut.target_path,
             "extension": shortcut.extension,
-            "icon": shortcut.icon,
+            "icon": shortcut.icon_path,
             "args": shortcut.args,
             "start_folder": shortcut.start_folder.value,
         }
@@ -20,7 +20,7 @@ class ShortcutSerializer:
             file_path=data["file_path"],
             target_path=data["target_path"],
             extension=data["extension"],
-            icon=data["icon"],
+            icon_path=data["icon"],
             args=data["args"],
             is_broken=False,
             start_folder=StartFolder(data["start_folder"]),

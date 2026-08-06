@@ -2,11 +2,10 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import QFileInfo, Qt
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QColor
 from PySide6.QtWidgets import (
     QButtonGroup,
-    QFileIconProvider,
     QHBoxLayout,
     QHeaderView,
     QInputDialog,
@@ -21,9 +20,12 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from managers.icon_manager import IconManager
 from models.shortcut import Shortcut
 from models.ui_table import TableView
+from services.shortcut_writer import ShortcutWriter
 from ui.settings_window import SettingsWindow
+from ui.shortcut_editor import ShortcutEditor
 
 
 class MainWindow(QMainWindow):
@@ -35,19 +37,15 @@ class MainWindow(QMainWindow):
         self.shortcut_manager = shortcut_manager
         self.backup_manager = backup_manager
 
+        self.icon_manager = IconManager()
         self.settings_window = SettingsWindow()
 
         self.auto_fit_enabled = True
-
-        self.icon_cache = {}
 
         self.current_shortcuts = []
 
         self.broken_color = QColor("#ffcccc")
         self.duplicate_color = QColor("#fff2cc")
-
-        # used for icons in the table
-        self.icon_provider = QFileIconProvider()
 
         # window settings
         self.setWindowTitle("Start Menu Manager")
@@ -157,7 +155,7 @@ class MainWindow(QMainWindow):
 
     def scan_shortcuts(self):
 
-        self.current_shortcuts = self.shortcut_manager.load_shortcuts()
+        # self.current_shortcuts = self.shortcut_manager.load_shortcuts()
         self.refresh_all_shortcuts()
 
         if self.table_view == TableView.ALL_VIEW:
@@ -170,6 +168,7 @@ class MainWindow(QMainWindow):
             self.populate_table(self.windows_shortcuts)
 
     def refresh_all_shortcuts(self):
+        self.current_shortcuts = self.shortcut_manager.load_shortcuts()
         self.refresh_duplicates()
         self.refresh_brokens()
         self.refresh_windows_shortcuts()
@@ -210,7 +209,7 @@ class MainWindow(QMainWindow):
         self.table.clearContents()
 
         self.table.setRowCount(len(shortcuts))
-        self.table.setColumnCount(9)
+        self.table.setColumnCount(10)
 
         self.table.setHorizontalHeaderLabels(
             [
@@ -219,6 +218,7 @@ class MainWindow(QMainWindow):
                 "Target",
                 "Folder",
                 "Args",
+                "Starts In",
                 "File Path",
                 "Broken?",
                 "Duplicate",
@@ -233,19 +233,19 @@ class MainWindow(QMainWindow):
             header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
             self.table.setColumnWidth(0, 35)
 
-            for column in [1, 2, 4, 5]:
+            for column in [1, 2, 4, 5, 6]:
                 header.setSectionResizeMode(column, QHeaderView.ResizeMode.Stretch)
 
-            for column in [3, 6, 7, 8]:
+            for column in [3, 7, 8, 9]:
                 header.setSectionResizeMode(column, QHeaderView.ResizeMode.Fixed)
 
         else:
             header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
 
-            for column in [1, 2, 4, 5]:
+            for column in [1, 2, 4, 5, 6]:
                 header.setSectionResizeMode(column, QHeaderView.ResizeMode.Interactive)
 
-            for column in [3, 6, 7, 8]:
+            for column in [3, 7, 8, 9]:
                 header.setSectionResizeMode(column, QHeaderView.ResizeMode.Interactive)
 
         for row, shortcut in enumerate(shortcuts):
@@ -263,6 +263,7 @@ class MainWindow(QMainWindow):
                 QTableWidgetItem(shortcut.target_path or ""),
                 QTableWidgetItem(f"{shortcut.start_folder.value.title()} Folder"),
                 QTableWidgetItem(shortcut.args or ""),
+                QTableWidgetItem(shortcut.working_dir or ""),
                 QTableWidgetItem(shortcut.file_path or ""),
                 QTableWidgetItem(shortcut_status),
                 QTableWidgetItem(shortcut_dup_status),
@@ -270,13 +271,7 @@ class MainWindow(QMainWindow):
             ]
 
             # Create icon item separately
-            if shortcut.file_path not in self.icon_cache:
-                self.icon_cache[shortcut.file_path] = self.icon_provider.icon(
-                    QFileInfo(shortcut.file_path)
-                )
-
-            icon = self.icon_cache[shortcut.file_path]
-            # icon = self.icon_provider.icon(QFileInfo(shortcut.file_path))
+            icon = self.icon_manager.get_icon(shortcut.file_path)
 
             icon_item = QTableWidgetItem()
             icon_item.setIcon(icon)
@@ -315,10 +310,10 @@ class MainWindow(QMainWindow):
             header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
             self.table.setColumnWidth(0, 35)
 
-            for column in [1, 2, 4, 5]:
+            for column in [1, 2, 4, 5, 6]:
                 header.setSectionResizeMode(column, QHeaderView.ResizeMode.Stretch)
 
-            for column in [3, 6, 7, 8]:
+            for column in [3, 7, 8, 9]:
                 header.setSectionResizeMode(column, QHeaderView.ResizeMode.Fixed)
 
             self.toggle_auto_fit_action.setChecked(True)
@@ -326,10 +321,10 @@ class MainWindow(QMainWindow):
         else:
             header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
 
-            for column in [1, 2, 4, 5]:
+            for column in [1, 2, 4, 5, 6]:
                 header.setSectionResizeMode(column, QHeaderView.ResizeMode.Interactive)
 
-            for column in [3, 6, 7, 8]:
+            for column in [3, 7, 8, 9]:
                 header.setSectionResizeMode(column, QHeaderView.ResizeMode.Interactive)
 
             self.toggle_auto_fit_action.setChecked(False)
@@ -518,7 +513,28 @@ class MainWindow(QMainWindow):
         subprocess.Popen(["explorer", "/select,", shortcut.target_path])
 
     def edit_shortcut(self, shortcut):
-        pass
+        self.shortcut_writer = ShortcutWriter()
+
+        editor = ShortcutEditor(shortcut, self.icon_manager)
+        old_name = shortcut.name
+
+        if editor.exec():
+            # editor.get_shortcut()
+
+            updated_shortcut = editor.get_shortcut()
+
+            if updated_shortcut.name != old_name:
+                self.shortcut_writer.rename_shortcut(
+                    updated_shortcut,
+                    updated_shortcut.name,
+                )
+
+            self.shortcut_writer.update_shortcut(updated_shortcut)
+
+            self.icon_manager.clear_cache()
+            self.scan_shortcuts()
+
+        # self.populate_table(self.current_shortcuts)
 
     def delete_shortcut(self, shortcut: Shortcut):
 
