@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from managers.icon_manager import IconManager
+from managers.settings_manager import SettingsManager
 from models.shortcut import Shortcut
 from models.ui_table import TableView
 from services.shortcut_writer import ShortcutWriter
@@ -38,7 +39,7 @@ class MainWindow(QMainWindow):
         self.backup_manager = backup_manager
 
         self.icon_manager = IconManager()
-        self.settings_window = SettingsWindow()
+        self.settings_manager = SettingsManager()
 
         self.auto_fit_enabled = True
 
@@ -306,7 +307,6 @@ class MainWindow(QMainWindow):
         header = self.table.horizontalHeader()
 
         if self.auto_fit_enabled:
-
             header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
             self.table.setColumnWidth(0, 35)
 
@@ -419,9 +419,8 @@ class MainWindow(QMainWindow):
         self.populate_table(self.current_shortcuts)
 
     def open_settings(self):
-        self.settings_window.show()
-        self.settings_window.raise_()
-        self.settings_window.activateWindow()
+        settings_window = SettingsWindow(self.settings_manager)
+        settings_window.exec()
 
     def create_menu_bar(self):
 

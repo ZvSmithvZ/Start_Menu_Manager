@@ -25,7 +25,6 @@ class ShortcutEditor(QDialog):
         self.icon_label.setFixedSize(48, 48)
 
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Name"))
 
         # Icon
 
@@ -43,6 +42,7 @@ class ShortcutEditor(QDialog):
         layout.addLayout(icon_layout)
 
         # Name
+        layout.addWidget(QLabel("Name"))
         self.name_edit = QLineEdit(shortcut.name)
         layout.addWidget(self.name_edit)
 
