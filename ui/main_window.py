@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 
 from models.shortcut import Shortcut
 from models.ui_table import TableView
+from ui.settings_window import SettingsWindow
 
 
 class MainWindow(QMainWindow):
@@ -33,6 +34,8 @@ class MainWindow(QMainWindow):
 
         self.shortcut_manager = shortcut_manager
         self.backup_manager = backup_manager
+
+        self.settings_window = SettingsWindow()
 
         self.auto_fit_enabled = True
 
@@ -70,17 +73,17 @@ class MainWindow(QMainWindow):
         button_layout.addWidget(self.search_box)
 
         # start of horizontal buttons
-        self.scan_button = QPushButton("Refresh")
-        self.scan_button.clicked.connect(self.scan_shortcuts)
-        button_layout.addWidget(self.scan_button)
+        # self.scan_button = QPushButton("Refresh")
+        # self.scan_button.clicked.connect(self.scan_shortcuts)
+        # button_layout.addWidget(self.scan_button)
 
-        self.fit_data_button = QPushButton("Fit Data")
-        self.fit_data_button.clicked.connect(self.fit_data)
-        button_layout.addWidget(self.fit_data_button)
+        # self.fit_data_button = QPushButton("Fit Data")
+        # self.fit_data_button.clicked.connect(self.fit_data)
+        # button_layout.addWidget(self.fit_data_button)
 
-        self.toggle_auto_fit_button = QPushButton("Toggle Auto Fit")
-        self.toggle_auto_fit_button.clicked.connect(self.toggle_auto_fit)
-        button_layout.addWidget(self.toggle_auto_fit_button)
+        # self.toggle_auto_fit_button = QPushButton("Toggle Auto Fit")
+        # self.toggle_auto_fit_button.clicked.connect(self.toggle_auto_fit)
+        # button_layout.addWidget(self.toggle_auto_fit_button)
 
         # --grouped view buttons
         self.view_group = QButtonGroup(self)
@@ -420,6 +423,11 @@ class MainWindow(QMainWindow):
 
         self.populate_table(self.current_shortcuts)
 
+    def open_settings(self):
+        self.settings_window.show()
+        self.settings_window.raise_()
+        self.settings_window.activateWindow()
+
     def create_menu_bar(self):
 
         menu_bar = self.menuBar()
@@ -436,12 +444,24 @@ class MainWindow(QMainWindow):
 
         file_menu.addSeparator()
 
+        settings_action = QAction("Settings", self)
+        settings_action.triggered.connect(self.open_settings)
+
+        file_menu.addAction(settings_action)
+        file_menu.addSeparator()
+
         exit_action = QAction("Exit", self)
         exit_action.triggered.connect(self.close)
 
         file_menu.addAction(exit_action)
 
         self.tools_menu = menu_bar.addMenu("Tools")
+
+        refresh_action = QAction("Refresh Shortcuts", self)
+        refresh_action.triggered.connect(self.scan_shortcuts)
+        self.tools_menu.addAction(refresh_action)
+
+        file_menu.addSeparator()
 
         self.toggle_auto_fit_action = QAction("Auto Fit Column Widths to Window", self)
         self.toggle_auto_fit_action.triggered.connect(self.toggle_auto_fit)
@@ -451,6 +471,12 @@ class MainWindow(QMainWindow):
             self.toggle_auto_fit_action.setChecked(True)
         else:
             self.toggle_auto_fit_action.setChecked(False)
+
+        file_menu.addSeparator()
+
+        fit_columns_to_data = QAction("Set Column Widths to Data", self)
+        fit_columns_to_data.triggered.connect(self.fit_data)
+        self.tools_menu.addAction(fit_columns_to_data)
 
     def show_context_menu(self, position):
         menu = QMenu()
