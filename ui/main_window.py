@@ -35,6 +35,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.table_view = TableView.ALL_VIEW
 
+        self.loading_table = False
+
         self.shortcut_manager = shortcut_manager
         self.backup_manager = backup_manager
 
@@ -68,9 +70,9 @@ class MainWindow(QMainWindow):
         button_layout.addWidget(self.search_box)
 
         # start of horizontal buttons
-        self.get_checked_button = QPushButton("Print checked")
-        self.get_checked_button.clicked.connect(self.get_checked_shortcuts)
-        button_layout.addWidget(self.get_checked_button)
+        # self.get_checked_button = QPushButton("Print checked")
+        # self.get_checked_button.clicked.connect(self.get_checked_shortcuts)
+        # button_layout.addWidget(self.get_checked_button)
 
         # self.fit_data_button = QPushButton("Fit Data")
         # self.fit_data_button.clicked.connect(self.fit_data)
@@ -163,15 +165,16 @@ class MainWindow(QMainWindow):
 
         # self.current_shortcuts = self.shortcut_manager.load_shortcuts()
         self.refresh_all_shortcuts()
+        self.populate_table(self.get_displayed_shortcuts())
 
-        if self.table_view == TableView.ALL_VIEW:
-            self.populate_table(self.current_shortcuts)
-        elif self.table_view == TableView.DUP_VIEW:
-            self.populate_table(self.duplicate_shortcuts)
-        elif self.table_view == TableView.BROKE_VIEW:
-            self.populate_table(self.broken_shortcuts)
-        elif self.table_view == TableView.WIN_VIEW:
-            self.populate_table(self.windows_shortcuts)
+        # if self.table_view == TableView.ALL_VIEW:
+        #     self.populate_table(self.current_shortcuts)
+        # elif self.table_view == TableView.DUP_VIEW:
+        #     self.populate_table(self.duplicate_shortcuts)
+        # elif self.table_view == TableView.BROKE_VIEW:
+        #     self.populate_table(self.broken_shortcuts)
+        # elif self.table_view == TableView.WIN_VIEW:
+        #     self.populate_table(self.windows_shortcuts)
 
     def refresh_all_shortcuts(self):
         self.current_shortcuts = self.shortcut_manager.load_shortcuts()
@@ -217,7 +220,9 @@ class MainWindow(QMainWindow):
         self.populate_table(self.windows_shortcuts)
 
     def populate_table(self, shortcuts):
-        print("Populate TABLE")
+
+        self.loading_table = True
+
         self.table.blockSignals(True)
         self.table.setSortingEnabled(False)
         self.table.setUpdatesEnabled(False)
@@ -225,7 +230,7 @@ class MainWindow(QMainWindow):
         self.table.clearContents()
 
         self.table.setRowCount(len(shortcuts))
-        self.table.setColumnCount(10)
+        self.table.setColumnCount(11)
 
         self.table.setHorizontalHeaderLabels(
             [
@@ -246,7 +251,6 @@ class MainWindow(QMainWindow):
         header = self.table.horizontalHeader()
 
         if self.auto_fit_enabled:
-
             header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
             self.table.setColumnWidth(0, 20)
 
@@ -316,20 +320,22 @@ class MainWindow(QMainWindow):
                 self.table.setItem(row, column, item)
 
             if shortcut.is_broken:
-                for column in range(len(items)):
-                    cell = self.table.item(row, column)
-                    if cell:
-                        cell.setBackground(self.broken_color)
+                self.set_row_color(row, self.broken_color)
 
             elif shortcut.is_duplicate:
-                for column in range(len(items)):
-                    cell = self.table.item(row, column)
-                    if cell:
-                        cell.setBackground(self.duplicate_color)
+                self.set_row_color(row, self.duplicate_color)
 
         self.table.setUpdatesEnabled(True)
         self.table.setSortingEnabled(True)
         self.table.blockSignals(False)
+        self.loading_table = False
+
+    def set_row_color(self, row, color):
+        for column in range(self.table.columnCount()):
+            cell = self.table.item(row, column)
+
+            if cell:
+                cell.setBackground(color)
 
     def fit_data(self):
         self.table.resizeColumnsToContents()
@@ -381,7 +387,7 @@ class MainWindow(QMainWindow):
 
     def apply_column_visibility(self):
         show_extensions = self.settings_manager.get("show_extensions", False)
-        self.table.setColumnHidden(9, not show_extensions)
+        self.table.setColumnHidden(10, not show_extensions)
 
     def filter_table(self, text: str):
         text = text.lower()
@@ -436,8 +442,6 @@ class MainWindow(QMainWindow):
 
             if item.checkState() == Qt.CheckState.Checked:
                 checked.append(shortcuts[row])
-
-        print(checked)
 
         return checked
 
@@ -532,13 +536,12 @@ class MainWindow(QMainWindow):
 
         settings_action = QAction("Settings", self)
         settings_action.triggered.connect(self.open_settings)
-
         file_menu.addAction(settings_action)
+
         file_menu.addSeparator()
 
         exit_action = QAction("Exit", self)
         exit_action.triggered.connect(self.close)
-
         file_menu.addAction(exit_action)
 
         self.tools_menu = menu_bar.addMenu("Tools")
@@ -564,6 +567,20 @@ class MainWindow(QMainWindow):
         fit_columns_to_data.triggered.connect(self.fit_data)
         self.tools_menu.addAction(fit_columns_to_data)
 
+        actions_menu = menu_bar.addMenu("Actions")
+
+        open_shortcut_location_action = QAction("Open Shortcut Location", self)
+        open_shortcut_location_action.triggered.connect(self.open_shortcut_location)
+        actions_menu.addAction(open_shortcut_location_action)
+
+        open_target_location_action = QAction("Open Target Location", self)
+        open_target_location_action.triggered.connect(self.open_shortcut_target)
+        actions_menu.addAction(open_target_location_action)
+
+        delete_action = QAction("Delete Selected", self)
+        delete_action.triggered.connect(self.delete_selected_shortcuts)
+        actions_menu.addAction(delete_action)
+
     def show_context_menu(self, position):
         menu = QMenu()
 
@@ -576,13 +593,9 @@ class MainWindow(QMainWindow):
 
         # open location menu entry
         open_location_action = menu.addAction("Open Shortcut Location")
-        open_location_action.triggered.connect(
-            lambda: self.open_shortcut_location(shortcut)
-        )
+        open_location_action.triggered.connect(self.open_shortcut_location)
         open_target_action = menu.addAction("Open Target Location")
-        open_target_action.triggered.connect(
-            lambda: self.open_shortcut_target(shortcut)
-        )
+        open_target_action.triggered.connect(self.open_shortcut_target)
 
         menu.addSeparator()
 
@@ -596,11 +609,62 @@ class MainWindow(QMainWindow):
 
         menu.exec(self.table.viewport().mapToGlobal(position))
 
-    def open_shortcut_location(self, shortcut):
-        subprocess.run(["explorer", "/select,", shortcut.file_path])  # noqa: PLW1510
+    def confirm_many_windows(self, count, window_title):
 
-    def open_shortcut_target(self, shortcut: Shortcut):
-        subprocess.Popen(["explorer", "/select,", shortcut.target_path])
+        if count <= 4:
+            return True
+
+        answer = QMessageBox.question(
+            self,
+            "Open Multiple Windows",
+            f"This will open {count} {window_title}.\n\nContinue?",
+        )
+
+        return answer == QMessageBox.StandardButton.Yes
+
+    def open_shortcut_location(self):
+        shortcuts = self.get_action_shortcuts()
+        if not shortcuts:
+            return
+
+        opened_folders = set()
+        unique_targets = {}
+
+        for shortcut in shortcuts:
+            folder = Path(shortcut.file_path).parent
+            if folder in opened_folders:
+                continue
+
+            opened_folders.add(folder)
+            unique_targets.setdefault(shortcut.file_path, shortcut)
+
+            if not self.confirm_many_windows(len(unique_targets), "Explorer Windows"):
+
+                return
+            subprocess.Popen(
+                [
+                    "explorer",
+                    "/select,",
+                    shortcut.file_path,
+                ]
+            )
+
+    def open_shortcut_target(self):
+        shortcuts = self.get_action_shortcuts()
+
+        if not shortcuts:
+            return
+
+        unique_targets = {}
+
+        for shortcut in shortcuts:
+            unique_targets.setdefault(shortcut.target_path, shortcut)
+
+        if not self.confirm_many_windows(len(unique_targets), "Explorer Windows"):
+            return
+
+        for shortcut in unique_targets.values():
+            subprocess.Popen(["explorer", "/select,", shortcut.target_path])
 
     def double_click_edit(self, row, column):
         shortcut = self.get_shortcut_at_row(row)
@@ -630,38 +694,68 @@ class MainWindow(QMainWindow):
             self.icon_manager.clear_cache()
             self.scan_shortcuts()
 
-    def delete_shortcut(self, shortcut: Shortcut):
+    def delete_shortcut(self, shortcut: Shortcut, refresh=True):
 
         shortcut_path = Path(shortcut.file_path)
 
         if shortcut_path.suffix.lower() != ".lnk":
             return
 
+        if refresh:
+            answer = QMessageBox.question(
+                self,
+                "Delete Shortcut",
+                f"Delete {shortcut.name}?",
+            )
+
+            if answer != QMessageBox.StandardButton.Yes:
+                return
+
+        shortcut_path.unlink()
+
+        if refresh:
+            self.scan_shortcuts()
+
+    def delete_selected_shortcuts(self):
+
+        shortcuts = self.get_action_shortcuts()
+
+        if not shortcuts:
+            return
+
         answer = QMessageBox.question(
             self,
-            "Delete Shortcut",
-            f"Delete {shortcut.name}?",
+            "Delete Shortcuts",
+            f"Delete {len(shortcuts)} shortcut(s)?",
         )
 
         if answer != QMessageBox.StandardButton.Yes:
             return
 
-        shortcut_path.unlink()
+        for shortcut in shortcuts:
+            self.delete_shortcut(shortcut, refresh=False)
 
         self.scan_shortcuts()
 
-    def delete_checked_shortcuts(self):
+    def get_action_shortcuts(self):
+        checked = self.get_checked_shortcuts()
 
-        shortcuts = self.get_checked_shortcuts()
+        if checked:
+            return checked
 
-        if shortcuts is None:
-            return
+        row = self.table.currentRow()
 
-        for shortcut in shortcuts:
-            self.delete_shortcut(shortcut)
+        shortcut = self.get_shortcut_at_row(row)
+
+        if shortcut:
+            return [shortcut]
+
+        return []
 
     def checkbox_changed(self, item):
-        print("CHECKBOX CHANGED", item.row(), item.column())
+        if self.loading_table:
+            return
+
         if item.column() != 0:
             return
 
@@ -672,7 +766,7 @@ class MainWindow(QMainWindow):
         try:
             if item.checkState() == Qt.CheckState.Checked:
 
-                # Store existing colors before changing them
+                # Store original colors
                 for col in range(self.table.columnCount()):
                     cell = self.table.item(row, col)
 
@@ -681,11 +775,12 @@ class MainWindow(QMainWindow):
                             Qt.ItemDataRole.UserRole + 1,
                             cell.background(),
                         )
-                        cell.setBackground(QColor("#d0e7ff"))
+
+                self.set_row_color(row, QColor("#d0e7ff"))
 
             else:
 
-                # Restore previous colors
+                # Restore original colors
                 for col in range(self.table.columnCount()):
                     cell = self.table.item(row, col)
 
@@ -697,3 +792,4 @@ class MainWindow(QMainWindow):
 
         finally:
             self.table.blockSignals(False)
+            self.table.setCurrentCell(item.row(), 1)
