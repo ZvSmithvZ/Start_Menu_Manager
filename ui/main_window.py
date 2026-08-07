@@ -379,6 +379,14 @@ class MainWindow(QMainWindow):
 
         return []
 
+    def get_shortcut_at_row(self, row):
+        shortcuts = self.get_displayed_shortcuts()
+
+        if row < 0 or row >= len(shortcuts):
+            return None
+
+        return shortcuts[row]
+
     def create_auto_backup(self):
         backup_path = self.backup_manager.save_backup(
             self.shortcut_manager.shortcuts, False, None
@@ -507,11 +515,10 @@ class MainWindow(QMainWindow):
 
         row = self.table.rowAt(position.y())
 
-        if row < 0:
-            return
+        shortcut = self.get_shortcut_at_row(row)
 
-        shortcuts = self.get_displayed_shortcuts()
-        shortcut = shortcuts[row]
+        if not shortcut:
+            return
 
         # open location menu entry
         open_location_action = menu.addAction("Open Shortcut Location")
@@ -542,12 +549,9 @@ class MainWindow(QMainWindow):
         subprocess.Popen(["explorer", "/select,", shortcut.target_path])
 
     def double_click_edit(self, row, column):
-        shortcuts = self.get_displayed_shortcuts()
-
-        if row < 0 or row >= len(shortcuts):
+        shortcut = self.get_shortcut_at_row(row)
+        if not shortcut:
             return
-
-        shortcut = shortcuts[row]
 
         self.edit_shortcut(shortcut)
 

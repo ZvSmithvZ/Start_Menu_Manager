@@ -1,8 +1,8 @@
 from PySide6.QtWidgets import (
     QCheckBox,
     QDialog,
+    QGroupBox,
     QHBoxLayout,
-    QLabel,
     QPushButton,
     QVBoxLayout,
 )
@@ -22,22 +22,36 @@ class SettingsWindow(QDialog):
 
     def setup_ui(self):
 
-        layout = QVBoxLayout(self)
+        main_layout = QVBoxLayout(self)
 
         # Table settings
-        layout.addWidget(QLabel("Table Settings"))
 
-        self.dynamic_columns_checkbox = QCheckBox("Auto Fit Column Widths to Window")
+        table_group = QGroupBox("Table Settings")
+        table_layout = QVBoxLayout()
 
-        self.show_extensions_checkbox = QCheckBox("Show file extensions")
+        # layout.addWidget(QLabel("Table Settings"))
 
-        layout.addWidget(self.dynamic_columns_checkbox)
-        layout.addWidget(self.show_extensions_checkbox)
+        self.auto_fit_checkbox = QCheckBox("Auto Fit Column Widths to Window")
+        self.show_extensions_checkbox = QCheckBox("Show file extensions column")
+
+        table_layout.addWidget(self.auto_fit_checkbox)
+        table_layout.addWidget(self.show_extensions_checkbox)
+
+        table_group.setLayout(table_layout)
 
         # Backup settings
-        layout.addWidget(QLabel("Backup Settings"))
+
+        backup_group = QGroupBox("Backup Settings")
+        backup_layout = QVBoxLayout()
+
+        # backup_layout.addWidget(QLabel("Backup Settings"))
         self.auto_backup_checkbox = QCheckBox("Create automatic backup before changes")
-        layout.addWidget(self.auto_backup_checkbox)
+        backup_layout.addWidget(self.auto_backup_checkbox)
+
+        backup_group.setLayout(backup_layout)
+
+        main_layout.addWidget(table_group)
+        main_layout.addWidget(backup_group)
 
         # Buttons
         button_layout = QHBoxLayout()
@@ -53,11 +67,11 @@ class SettingsWindow(QDialog):
         button_layout.addWidget(cancel_button)
         button_layout.addWidget(save_button)
 
-        layout.addLayout(button_layout)
+        main_layout.addLayout(button_layout)
 
     def load_settings(self):
 
-        self.dynamic_columns_checkbox.setChecked(
+        self.auto_fit_checkbox.setChecked(
             self.settings_manager.get(
                 "auto_fit_column_widths",
                 True,
@@ -82,7 +96,7 @@ class SettingsWindow(QDialog):
 
         self.settings_manager.set(
             "auto_fit_column_widths",
-            self.dynamic_columns_checkbox.isChecked(),
+            self.auto_fit_checkbox.isChecked(),
         )
 
         self.settings_manager.set(
