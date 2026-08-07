@@ -68,9 +68,9 @@ class MainWindow(QMainWindow):
         button_layout.addWidget(self.search_box)
 
         # start of horizontal buttons
-        # self.scan_button = QPushButton("Refresh")
-        # self.scan_button.clicked.connect(self.scan_shortcuts)
-        # button_layout.addWidget(self.scan_button)
+        self.get_checked_button = QPushButton("Print checked")
+        self.get_checked_button.clicked.connect(self.get_checked_shortcuts)
+        button_layout.addWidget(self.get_checked_button)
 
         # self.fit_data_button = QPushButton("Fit Data")
         # self.fit_data_button.clicked.connect(self.fit_data)
@@ -129,6 +129,8 @@ class MainWindow(QMainWindow):
                 color: white;
             }
         """)
+        # highlight checked rows
+        self.table.itemChanged.connect(self.checkbox_changed)
 
         # setting the selection behavior to highlight the whole row
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -190,26 +192,36 @@ class MainWindow(QMainWindow):
         self.windows_shortcuts = self.shortcut_manager.find_windows_entries()
 
     def show_all_shortcuts(self):
-        self.populate_table(self.current_shortcuts)
+        if self.table_view == TableView.ALL_VIEW:
+            return
         self.table_view = TableView.ALL_VIEW
+        self.populate_table(self.current_shortcuts)
 
     def show_duplicate_shortcuts(self):
-        self.populate_table(self.duplicate_shortcuts)
+        if self.table_view == TableView.DUP_VIEW:
+            return
         self.table_view = TableView.DUP_VIEW
+        self.populate_table(self.duplicate_shortcuts)
 
     def show_broken_shortcuts(self):
-        self.populate_table(self.broken_shortcuts)
+        if self.table_view == TableView.BROKE_VIEW:
+            return
         self.table_view = TableView.BROKE_VIEW
+        self.populate_table(self.broken_shortcuts)
 
     def show_windows_shortcuts(self):
-        self.populate_table(self.windows_shortcuts)
+        if self.table_view == TableView.WIN_VIEW:
+            return
+
         self.table_view = TableView.WIN_VIEW
+        self.populate_table(self.windows_shortcuts)
 
     def populate_table(self, shortcuts):
-
+        print("Populate TABLE")
+        self.table.blockSignals(True)
         self.table.setSortingEnabled(False)
-
         self.table.setUpdatesEnabled(False)
+
         self.table.clearContents()
 
         self.table.setRowCount(len(shortcuts))
@@ -217,6 +229,7 @@ class MainWindow(QMainWindow):
 
         self.table.setHorizontalHeaderLabels(
             [
+                "",
                 "Icon",
                 "Name",
                 "Target",
@@ -235,21 +248,27 @@ class MainWindow(QMainWindow):
         if self.auto_fit_enabled:
 
             header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
-            self.table.setColumnWidth(0, 35)
+            self.table.setColumnWidth(0, 20)
 
-            for column in [1, 2, 4, 5, 6]:
+            header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
+            self.table.setColumnWidth(1, 35)
+
+            for column in [2, 3, 5, 6]:
                 header.setSectionResizeMode(column, QHeaderView.ResizeMode.Stretch)
 
-            for column in [3, 7, 8, 9]:
+            for column in [4, 7, 8, 9, 10]:
                 header.setSectionResizeMode(column, QHeaderView.ResizeMode.Fixed)
 
         else:
+            self.table.setColumnWidth(0, 20)
             header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
 
-            for column in [1, 2, 4, 5, 6]:
+            header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
+
+            for column in [2, 3, 5, 6]:
                 header.setSectionResizeMode(column, QHeaderView.ResizeMode.Interactive)
 
-            for column in [3, 7, 8, 9]:
+            for column in [4, 7, 8, 9, 10]:
                 header.setSectionResizeMode(column, QHeaderView.ResizeMode.Interactive)
 
         for row, shortcut in enumerate(shortcuts):
@@ -262,6 +281,7 @@ class MainWindow(QMainWindow):
 
             # Create normal text items
             items = [
+                None,  # checkbox placeholder
                 None,  # Icon placeholder
                 QTableWidgetItem(shortcut.name or ""),
                 QTableWidgetItem(shortcut.target_path or ""),
@@ -274,13 +294,22 @@ class MainWindow(QMainWindow):
                 QTableWidgetItem(shortcut.extension or ""),
             ]
 
+            # creating checkbox
+            checkbox_item = QTableWidgetItem()
+            checkbox_item.setFlags(
+                Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled
+            )
+
+            checkbox_item.setCheckState(Qt.CheckState.Unchecked)
+            items[0] = checkbox_item
+
             # Create icon item separately
             icon = self.icon_manager.get_icon(shortcut.file_path)
 
             icon_item = QTableWidgetItem()
             icon_item.setIcon(icon)
 
-            items[0] = icon_item
+            items[1] = icon_item
 
             # populating the table with items
             for column, item in enumerate(items):
@@ -300,6 +329,7 @@ class MainWindow(QMainWindow):
 
         self.table.setUpdatesEnabled(True)
         self.table.setSortingEnabled(True)
+        self.table.blockSignals(False)
 
     def fit_data(self):
         self.table.resizeColumnsToContents()
@@ -324,26 +354,30 @@ class MainWindow(QMainWindow):
         header = self.table.horizontalHeader()
         if self.auto_fit_enabled:
             header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
-            self.table.setColumnWidth(0, 35)
+            self.table.setColumnWidth(0, 20)
 
-            for column in [1, 2, 4, 5, 6]:
+            header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
+            self.table.setColumnWidth(1, 35)
+
+            for column in [2, 3, 5, 6]:
                 header.setSectionResizeMode(column, QHeaderView.ResizeMode.Stretch)
 
-            for column in [3, 7, 8, 9]:
+            for column in [4, 7, 8, 9, 10]:
                 header.setSectionResizeMode(column, QHeaderView.ResizeMode.Fixed)
 
             self.toggle_auto_fit_action.setChecked(True)
 
         else:
+            self.table.setColumnWidth(0, 20)
             header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
 
-            for column in [1, 2, 4, 5, 6]:
+            header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
+
+            for column in [2, 3, 5, 6]:
                 header.setSectionResizeMode(column, QHeaderView.ResizeMode.Interactive)
 
-            for column in [3, 7, 8, 9]:
+            for column in [4, 7, 8, 9, 10]:
                 header.setSectionResizeMode(column, QHeaderView.ResizeMode.Interactive)
-
-            self.toggle_auto_fit_action.setChecked(False)
 
     def apply_column_visibility(self):
         show_extensions = self.settings_manager.get("show_extensions", False)
@@ -386,6 +420,26 @@ class MainWindow(QMainWindow):
             return None
 
         return shortcuts[row]
+
+    def get_checked_shortcuts(self):
+
+        checked = []
+
+        shortcuts = self.get_displayed_shortcuts()
+
+        for row in range(self.table.rowCount()):
+
+            item = self.table.item(row, 0)
+
+            if item is None:
+                return
+
+            if item.checkState() == Qt.CheckState.Checked:
+                checked.append(shortcuts[row])
+
+        print(checked)
+
+        return checked
 
     def create_auto_backup(self):
         backup_path = self.backup_manager.save_backup(
@@ -595,3 +649,51 @@ class MainWindow(QMainWindow):
         shortcut_path.unlink()
 
         self.scan_shortcuts()
+
+    def delete_checked_shortcuts(self):
+
+        shortcuts = self.get_checked_shortcuts()
+
+        if shortcuts is None:
+            return
+
+        for shortcut in shortcuts:
+            self.delete_shortcut(shortcut)
+
+    def checkbox_changed(self, item):
+        print("CHECKBOX CHANGED", item.row(), item.column())
+        if item.column() != 0:
+            return
+
+        row = item.row()
+
+        self.table.blockSignals(True)
+
+        try:
+            if item.checkState() == Qt.CheckState.Checked:
+
+                # Store existing colors before changing them
+                for col in range(self.table.columnCount()):
+                    cell = self.table.item(row, col)
+
+                    if cell:
+                        cell.setData(
+                            Qt.ItemDataRole.UserRole + 1,
+                            cell.background(),
+                        )
+                        cell.setBackground(QColor("#d0e7ff"))
+
+            else:
+
+                # Restore previous colors
+                for col in range(self.table.columnCount()):
+                    cell = self.table.item(row, col)
+
+                    if cell:
+                        old_color = cell.data(Qt.ItemDataRole.UserRole + 1)
+
+                        if old_color:
+                            cell.setBackground(old_color)
+
+        finally:
+            self.table.blockSignals(False)
