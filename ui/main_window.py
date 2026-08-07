@@ -41,8 +41,6 @@ class MainWindow(QMainWindow):
         self.icon_manager = IconManager()
         self.settings_manager = SettingsManager()
 
-        self.auto_fit_enabled = True
-
         self.current_shortcuts = []
 
         self.broken_color = QColor("#ffcccc")
@@ -54,8 +52,6 @@ class MainWindow(QMainWindow):
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
-
-        self.create_menu_bar()
 
         # vertical stacking system
         layout = QVBoxLayout()
@@ -150,6 +146,13 @@ class MainWindow(QMainWindow):
         # sorting by clicking headers
         self.table.setSortingEnabled(True)
         self.table.horizontalHeader().setSortIndicatorShown(True)
+
+        self.table.cellDoubleClicked.connect(self.double_click_edit)
+
+        # build the top menu bar
+        self.create_menu_bar()
+        # apply column settings
+        self.apply_settings()
 
         # initially called to populate the table
         self.scan_shortcuts()
@@ -302,10 +305,23 @@ class MainWindow(QMainWindow):
         self.table.resizeColumnsToContents()
 
     def toggle_auto_fit(self):
-        self.auto_fit_enabled = not self.auto_fit_enabled
+        self.auto_fit_enabled = not self.settings_manager.get(
+            "auto_fit_column_widths", True
+        )
+        self.settings_manager.set(
+            "auto_fit_column_widths",
+            self.auto_fit_enabled,
+        )
+
+        self.settings_manager.save()
+        self.apply_auto_fit_settings()
+
+    def apply_auto_fit_settings(self):
+        self.auto_fit_enabled = self.settings_manager.get(
+            "auto_fit_column_widths", True
+        )
 
         header = self.table.horizontalHeader()
-
         if self.auto_fit_enabled:
             header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
             self.table.setColumnWidth(0, 35)
@@ -328,6 +344,10 @@ class MainWindow(QMainWindow):
                 header.setSectionResizeMode(column, QHeaderView.ResizeMode.Interactive)
 
             self.toggle_auto_fit_action.setChecked(False)
+
+    def apply_column_visibility(self):
+        show_extensions = self.settings_manager.get("show_extensions", False)
+        self.table.setColumnHidden(9, not show_extensions)
 
     def filter_table(self, text: str):
         text = text.lower()
@@ -418,11 +438,21 @@ class MainWindow(QMainWindow):
 
         self.populate_table(self.current_shortcuts)
 
+    def apply_settings(self):
+        self.apply_auto_fit_settings()
+        self.apply_column_visibility()
+
     def open_settings(self):
         settings_window = SettingsWindow(self.settings_manager)
-        settings_window.exec()
+        if settings_window.exec():
+            self.apply_settings()
 
     def create_menu_bar(self):
+
+        # grab auto fit setting
+        self.auto_fit_enabled = self.settings_manager.get(
+            "auto_fit_column_widths", True
+        )
 
         menu_bar = self.menuBar()
 
@@ -511,6 +541,16 @@ class MainWindow(QMainWindow):
     def open_shortcut_target(self, shortcut: Shortcut):
         subprocess.Popen(["explorer", "/select,", shortcut.target_path])
 
+    def double_click_edit(self, row, column):
+        shortcuts = self.get_displayed_shortcuts()
+
+        if row < 0 or row >= len(shortcuts):
+            return
+
+        shortcut = shortcuts[row]
+
+        self.edit_shortcut(shortcut)
+
     def edit_shortcut(self, shortcut):
         self.shortcut_writer = ShortcutWriter()
 
@@ -518,7 +558,6 @@ class MainWindow(QMainWindow):
         old_name = shortcut.name
 
         if editor.exec():
-            # editor.get_shortcut()
 
             updated_shortcut = editor.get_shortcut()
 
@@ -532,8 +571,6 @@ class MainWindow(QMainWindow):
 
             self.icon_manager.clear_cache()
             self.scan_shortcuts()
-
-        # self.populate_table(self.current_shortcuts)
 
     def delete_shortcut(self, shortcut: Shortcut):
 

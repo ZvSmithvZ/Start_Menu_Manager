@@ -59,7 +59,7 @@ class SettingsWindow(QDialog):
 
         self.dynamic_columns_checkbox.setChecked(
             self.settings_manager.get(
-                "dynamic_columns",
+                "auto_fit_column_widths",
                 True,
             )
         )
@@ -67,7 +67,7 @@ class SettingsWindow(QDialog):
         self.show_extensions_checkbox.setChecked(
             self.settings_manager.get(
                 "show_extensions",
-                True,
+                False,
             )
         )
 

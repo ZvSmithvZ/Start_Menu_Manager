@@ -1,6 +1,5 @@
 {
     "auto_fit_column_widths": true,
-    "show_extensions": true,
-    "auto_backup_before_changes": false,
-    "dynamic_columns": true
+    "show_extensions": false,
+    "auto_backup_before_changes": false
 }
