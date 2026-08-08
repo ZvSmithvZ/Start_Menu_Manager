@@ -49,6 +49,8 @@ class MainWindow(QMainWindow):
 
         self.broken_color = QColor("#ffcccc")
         self.duplicate_color = QColor("#fff2cc")
+        self.cursor_select_color = "#d0e7ff"
+        self.row_select_color = QColor("#badcff")
 
         # window settings
         self.setWindowTitle("Start Menu Manager")
@@ -127,11 +129,11 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.table)
 
         # setting highlight row color to light blue
-        self.table.setStyleSheet("""
-            QTableWidget::item:selected {
-                background-color: #3399ff;
-                color: white;
-            }
+        self.table.setStyleSheet(f"""
+            QTableWidget::item:selected {{
+                background-color: {self.cursor_select_color};
+                color: black;
+            }}
         """)
 
         # highlight checked rows
@@ -461,7 +463,7 @@ class MainWindow(QMainWindow):
                 if shortcut:
                     checked.append(shortcut)
 
-        print(checked)
+        # print(checked)
 
         return checked
 
@@ -604,16 +606,22 @@ class MainWindow(QMainWindow):
         actions_menu = menu_bar.addMenu("Actions")
 
         open_shortcut_location_action = QAction("Open Shortcut Location", self)
-        open_shortcut_location_action.triggered.connect(self.open_shortcut_location)
+        open_shortcut_location_action.triggered.connect(
+            self.open_shortcut_location_action_menu
+        )
         actions_menu.addAction(open_shortcut_location_action)
 
         open_target_location_action = QAction("Open Target Location", self)
-        open_target_location_action.triggered.connect(self.open_shortcut_target)
+        open_target_location_action.triggered.connect(
+            self.open_shortcut_target_action_menu
+        )
         actions_menu.addAction(open_target_location_action)
         actions_menu.addSeparator()
 
         edit_selected_shortcuts_action = QAction("Edit Selected", self)
-        edit_selected_shortcuts_action.triggered.connect(self.edit_selected_shortcuts)
+        edit_selected_shortcuts_action.triggered.connect(
+            self.edit_selected_shortcuts_action_menu
+        )
         actions_menu.addAction(edit_selected_shortcuts_action)
 
         actions_menu.addSeparator()
@@ -629,27 +637,31 @@ class MainWindow(QMainWindow):
         if row < 0:
             return
 
-        self.context_shortcuts = self.get_context_shortcuts(row)
+        shortcut = self.get_shortcut_at_row(row)
 
-        if not self.context_shortcuts:
+        if not shortcut:
             return
 
         # open location menu entry
         open_location_action = menu.addAction("Open Shortcut Location")
-        open_location_action.triggered.connect(self.open_shortcut_location)
+        open_location_action.triggered.connect(
+            lambda: self.open_shortcut_location([shortcut])
+        )
 
         open_target_action = menu.addAction("Open Target Location")
-        open_target_action.triggered.connect(self.open_shortcut_target)
+        open_target_action.triggered.connect(
+            lambda: self.open_shortcut_target([shortcut])
+        )
 
         menu.addSeparator()
 
         edit_action = menu.addAction("Edit Shortcut")
-        edit_action.triggered.connect(self.edit_selected_shortcuts)
+        edit_action.triggered.connect(lambda: self.edit_shortcut(shortcut))
 
         menu.addSeparator()
 
         delete_action = menu.addAction("Delete Shortcut")
-        delete_action.triggered.connect(self.delete_selected_shortcuts)
+        delete_action.triggered.connect(lambda: self.delete_context_shortcut(shortcut))
 
         menu.exec(self.table.viewport().mapToGlobal(position))
 
@@ -666,13 +678,19 @@ class MainWindow(QMainWindow):
 
         return answer == QMessageBox.StandardButton.Yes
 
-    def open_shortcut_location(self):
+    def open_shortcut_location_action_menu(self, shortcuts):
+        shortcuts = self.get_action_shortcuts()
+        if not shortcuts:
+            return
+        self.open_shortcut_location(shortcuts)
 
-        shortcuts = (
-            self.context_shortcuts
-            if self.context_shortcuts
-            else self.get_action_shortcuts()
-        )
+    def open_shortcut_location(self, shortcuts):
+
+        # shortcuts = (
+        #     self.context_shortcuts
+        #     if self.context_shortcuts
+        #     else self.get_action_shortcuts()
+        # )
 
         if not shortcuts:
             return
@@ -689,8 +707,8 @@ class MainWindow(QMainWindow):
             unique_targets.setdefault(shortcut.file_path, shortcut)
 
             if not self.confirm_many_windows(len(unique_targets), "Explorer Windows"):
-
                 return
+
             subprocess.Popen(
                 [
                     "explorer",
@@ -699,13 +717,19 @@ class MainWindow(QMainWindow):
                 ]
             )
 
-    def open_shortcut_target(self):
+    def open_shortcut_target_action_menu(self, shortcuts):
+        shortcuts = self.get_action_shortcuts()
+        if not shortcuts:
+            return
+        self.open_shortcut_target(shortcuts)
 
-        shortcuts = (
-            self.context_shortcuts
-            if self.context_shortcuts
-            else self.get_action_shortcuts()
-        )
+    def open_shortcut_target(self, shortcuts):
+
+        # shortcuts = (
+        #     self.context_shortcuts
+        #     if self.context_shortcuts
+        #     else self.get_action_shortcuts()
+        # )
 
         if not shortcuts:
             return
@@ -742,13 +766,14 @@ class MainWindow(QMainWindow):
             self.icon_manager.clear_cache()
             self.scan_shortcuts()
 
-    def edit_selected_shortcuts(self):
+    def edit_selected_shortcuts_action_menu(self):
 
-        shortcuts = (
-            self.context_shortcuts
-            if self.context_shortcuts
-            else self.get_action_shortcuts()
-        )
+        # shortcuts = (
+        #     self.context_shortcuts
+        #     if self.context_shortcuts
+        #     else self.get_action_shortcuts()
+        # )
+        shortcuts = self.get_action_shortcuts()
 
         if not shortcuts:
             return
@@ -770,60 +795,59 @@ class MainWindow(QMainWindow):
 
         self.edit_shortcut(shortcut)
 
-    def delete_shortcut(self, shortcut: Shortcut, refresh=True):
+    def delete_shortcut(self, shortcut: Shortcut):
 
         shortcut_path = Path(shortcut.file_path)
 
         if shortcut_path.suffix.lower() != ".lnk":
             return
 
-        # if refresh:
-
-        #     answer = QMessageBox.question(
-        #         self,
-        #         "Delete Shortcut",
-        #         f"Delete {shortcut.name}?",
-        #     )
-
-        #     if answer != QMessageBox.StandardButton.Yes:
-        #         return
-
         shortcut_path.unlink()
 
-        # if refresh:
-        #     self.scan_shortcuts()
+    def delete_context_shortcut(self, shortcut):
+
+        answer = QMessageBox.question(
+            self,
+            "Delete Shortcuts",
+            f"Delete shortcut? {shortcut.name}?",
+        )
+
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+
+        self.delete_shortcut(shortcut)
 
     def delete_selected_shortcuts(self):
 
-        shortcuts = (
-            self.context_shortcuts
-            if self.context_shortcuts
-            else self.get_action_shortcuts()
-        )
+        shortcuts = self.get_action_shortcuts()
 
         if not shortcuts:
             return
-        if len(shortcuts) > 1:
+
+        if len(shortcuts) <= 8:
+            shortcut_names = "\n".join(shortcut.name for shortcut in shortcuts)
+            # for shortcut in shortcuts:
+            #     if shortcut != shortcuts[-1]:
+            #         shortcut_del_message += f"{shortcut.name}'\n' "
+            #     else:
+            #         shortcut_del_message += f"{shortcut.name}"
+            answer = QMessageBox.question(
+                self,
+                "Delete Shortcuts",
+                f"Delete these shortcuts?\n\n{shortcut_names}?",
+            )
+        else:
             answer = QMessageBox.question(
                 self,
                 "Delete Shortcuts",
                 f"Delete {len(shortcuts)} shortcut(s)?",
             )
 
-            if answer != QMessageBox.StandardButton.Yes:
-                return
-        if len(shortcuts) == 1:
-            answer = QMessageBox.question(
-                self,
-                "Delete Shortcut",
-                f"Delete {shortcuts[0].name}?",
-            )
-
-            if answer != QMessageBox.StandardButton.Yes:
-                return
+        if answer != QMessageBox.StandardButton.Yes:
+            return
 
         for shortcut in shortcuts:
-            self.delete_shortcut(shortcut, refresh=False)
+            self.delete_shortcut(shortcut)
 
         self.scan_shortcuts()
 
@@ -842,22 +866,22 @@ class MainWindow(QMainWindow):
 
         return []
 
-    def get_context_shortcuts(self, row):
+    # def get_context_shortcuts(self, row):
 
-        clicked_shortcut = self.get_shortcut_at_row(row)
+    #     clicked_shortcut = self.get_shortcut_at_row(row)
 
-        if not clicked_shortcut:
-            return []
+    #     if not clicked_shortcut:
+    #         return []
 
-        checked = self.get_checked_shortcuts()
+    #     checked = self.get_checked_shortcuts()
 
-        # If the clicked row is already part of the checked selection,
-        # apply the action to all checked rows
-        if clicked_shortcut in checked:
-            return checked
+    #     # If the clicked row is already part of the checked selection,
+    #     # apply the action to all checked rows
+    #     if clicked_shortcut in checked:
+    #         return checked
 
-        # Otherwise, only act on the row that was clicked
-        return [clicked_shortcut]
+    #     # Otherwise, only act on the row that was clicked
+    #     return [clicked_shortcut]
 
     def checkbox_changed(self, row, state):
 
@@ -900,7 +924,7 @@ class MainWindow(QMainWindow):
                             cell.background(),
                         )
 
-                self.set_row_color(row, QColor("#d0e7ff"))
+                self.set_row_color(row, QColor(self.row_select_color))
 
             else:
 
