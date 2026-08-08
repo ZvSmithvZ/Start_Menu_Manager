@@ -137,7 +137,7 @@ class MainWindow(QMainWindow):
         """)
 
         # highlight checked rows
-        self.table.itemChanged.connect(self.checkbox_changed)
+        # self.table.itemChanged.connect(self.checkbox_changed)
 
         # setting the selection behavior to highlight the whole row
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -249,33 +249,6 @@ class MainWindow(QMainWindow):
             ]
         )
 
-        # header = self.table.horizontalHeader()
-
-        # if self.auto_fit_enabled:
-        #     header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
-        #     self.table.setColumnWidth(0, 10)
-
-        #     header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
-        #     self.table.setColumnWidth(1, 35)
-
-        #     for column in [2, 3, 5, 6]:
-        #         header.setSectionResizeMode(column, QHeaderView.ResizeMode.Stretch)
-
-        #     for column in [4, 7, 8, 9, 10]:
-        #         header.setSectionResizeMode(column, QHeaderView.ResizeMode.Fixed)
-
-        # else:
-        #     self.table.setColumnWidth(0, 10)
-        #     header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
-
-        #     header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
-
-        #     for column in [2, 3, 5, 6]:
-        #         header.setSectionResizeMode(column, QHeaderView.ResizeMode.Interactive)
-
-        #     for column in [4, 7, 8, 9, 10]:
-        #         header.setSectionResizeMode(column, QHeaderView.ResizeMode.Interactive)
-
         # Applying settings to column population
         self.apply_auto_fit_settings()
         self.apply_column_visibility()
@@ -331,11 +304,13 @@ class MainWindow(QMainWindow):
             for column, item in enumerate(items):
                 self.table.setItem(row, column, item)
 
-            if shortcut.is_broken:
-                self.set_row_color(row, self.broken_color)
+            self.update_row_color(row)
 
-            elif shortcut.is_duplicate:
-                self.set_row_color(row, self.duplicate_color)
+            # if shortcut.is_broken:
+            #     self.set_row_color(row, self.broken_color)
+
+            # elif shortcut.is_duplicate:
+            #     self.set_row_color(row, self.duplicate_color)
 
         self.table.setUpdatesEnabled(True)
         self.table.setSortingEnabled(True)
@@ -348,6 +323,43 @@ class MainWindow(QMainWindow):
 
             if cell:
                 cell.setBackground(color)
+
+    def update_row_color(self, row):
+
+        shortcut = self.get_shortcut_at_row(row)
+
+        if not shortcut:
+            return
+
+        if shortcut.is_selected:
+            self.set_row_color(
+                row,
+                QColor(self.row_select_color),
+            )
+
+        elif shortcut.is_broken:
+            self.set_row_color(
+                row,
+                self.broken_color,
+            )
+
+        elif shortcut.is_duplicate:
+            self.set_row_color(
+                row,
+                self.duplicate_color,
+            )
+
+        else:
+            self.clear_row_color(row)
+
+    def clear_row_color(self, row):
+
+        for column in range(self.table.columnCount()):
+
+            cell = self.table.item(row, column)
+
+            if cell:
+                cell.setBackground(self.table.palette().base())
 
     def fit_data(self):
         self.table.resizeColumnsToContents()
@@ -816,6 +828,7 @@ class MainWindow(QMainWindow):
             return
 
         self.delete_shortcut(shortcut)
+        self.scan_shortcuts()
 
     def delete_selected_shortcuts(self):
 
@@ -866,23 +879,6 @@ class MainWindow(QMainWindow):
 
         return []
 
-    # def get_context_shortcuts(self, row):
-
-    #     clicked_shortcut = self.get_shortcut_at_row(row)
-
-    #     if not clicked_shortcut:
-    #         return []
-
-    #     checked = self.get_checked_shortcuts()
-
-    #     # If the clicked row is already part of the checked selection,
-    #     # apply the action to all checked rows
-    #     if clicked_shortcut in checked:
-    #         return checked
-
-    #     # Otherwise, only act on the row that was clicked
-    #     return [clicked_shortcut]
-
     def checkbox_changed(self, row, state):
 
         if self.loading_table:
@@ -893,10 +889,7 @@ class MainWindow(QMainWindow):
         if not isinstance(checkbox, QCheckBox):
             return
 
-        checked = checkbox.isChecked()
-
-        # Get the Shortcut object from the row
-        item = self.table.item(row, 2)  # Name column
+        item = self.table.item(row, 2)
 
         if not item:
             return
@@ -906,37 +899,6 @@ class MainWindow(QMainWindow):
         if not shortcut:
             return
 
-        # Store selection state in the object
-        shortcut.is_selected = checked
+        shortcut.is_selected = checkbox.isChecked()
 
-        self.table.blockSignals(True)
-
-        try:
-            if checked:
-
-                # Store original colors before highlighting
-                for col in range(self.table.columnCount()):
-                    cell = self.table.item(row, col)
-
-                    if cell:
-                        cell.setData(
-                            Qt.ItemDataRole.UserRole + 1,
-                            cell.background(),
-                        )
-
-                self.set_row_color(row, QColor(self.row_select_color))
-
-            else:
-
-                # Restore previous colors
-                for col in range(self.table.columnCount()):
-                    cell = self.table.item(row, col)
-
-                    if cell:
-                        old_color = cell.data(Qt.ItemDataRole.UserRole + 1)
-
-                        if old_color:
-                            cell.setBackground(old_color)
-
-        finally:
-            self.table.blockSignals(False)
+        self.update_row_color(row)
