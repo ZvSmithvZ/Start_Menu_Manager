@@ -170,15 +170,6 @@ class MainWindow(QMainWindow):
         self.refresh_all_shortcuts()
         self.populate_table(self.get_displayed_shortcuts())
 
-        # if self.table_view == TableView.ALL_VIEW:
-        #     self.populate_table(self.current_shortcuts)
-        # elif self.table_view == TableView.DUP_VIEW:
-        #     self.populate_table(self.duplicate_shortcuts)
-        # elif self.table_view == TableView.BROKE_VIEW:
-        #     self.populate_table(self.broken_shortcuts)
-        # elif self.table_view == TableView.WIN_VIEW:
-        #     self.populate_table(self.windows_shortcuts)
-
     def refresh_all_shortcuts(self):
         self.clear_selection()
         self.current_shortcuts = self.shortcut_manager.load_shortcuts()
@@ -256,32 +247,36 @@ class MainWindow(QMainWindow):
             ]
         )
 
-        header = self.table.horizontalHeader()
+        # header = self.table.horizontalHeader()
 
-        if self.auto_fit_enabled:
-            header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
-            self.table.setColumnWidth(0, 10)
+        # if self.auto_fit_enabled:
+        #     header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
+        #     self.table.setColumnWidth(0, 10)
 
-            header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
-            self.table.setColumnWidth(1, 35)
+        #     header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
+        #     self.table.setColumnWidth(1, 35)
 
-            for column in [2, 3, 5, 6]:
-                header.setSectionResizeMode(column, QHeaderView.ResizeMode.Stretch)
+        #     for column in [2, 3, 5, 6]:
+        #         header.setSectionResizeMode(column, QHeaderView.ResizeMode.Stretch)
 
-            for column in [4, 7, 8, 9, 10]:
-                header.setSectionResizeMode(column, QHeaderView.ResizeMode.Fixed)
+        #     for column in [4, 7, 8, 9, 10]:
+        #         header.setSectionResizeMode(column, QHeaderView.ResizeMode.Fixed)
 
-        else:
-            self.table.setColumnWidth(0, 10)
-            header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
+        # else:
+        #     self.table.setColumnWidth(0, 10)
+        #     header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
 
-            header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
+        #     header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
 
-            for column in [2, 3, 5, 6]:
-                header.setSectionResizeMode(column, QHeaderView.ResizeMode.Interactive)
+        #     for column in [2, 3, 5, 6]:
+        #         header.setSectionResizeMode(column, QHeaderView.ResizeMode.Interactive)
 
-            for column in [4, 7, 8, 9, 10]:
-                header.setSectionResizeMode(column, QHeaderView.ResizeMode.Interactive)
+        #     for column in [4, 7, 8, 9, 10]:
+        #         header.setSectionResizeMode(column, QHeaderView.ResizeMode.Interactive)
+
+        # Applying settings to column population
+        self.apply_auto_fit_settings()
+        self.apply_column_visibility()
 
         for row, shortcut in enumerate(shortcuts):
 
@@ -354,6 +349,8 @@ class MainWindow(QMainWindow):
 
     def fit_data(self):
         self.table.resizeColumnsToContents()
+        if self.auto_fit_enabled:
+            self.toggle_auto_fit()
 
     def toggle_auto_fit(self):
         self.auto_fit_enabled = not self.settings_manager.get(
@@ -372,8 +369,8 @@ class MainWindow(QMainWindow):
             "auto_fit_column_widths", True
         )
 
-        header = self.table.horizontalHeader()
         if self.auto_fit_enabled:
+            header = self.table.horizontalHeader()
             header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
 
             self.table.setColumnWidth(0, 10)
@@ -381,25 +378,25 @@ class MainWindow(QMainWindow):
             header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
             self.table.setColumnWidth(1, 35)
 
-            for column in [2, 3, 5, 6]:
+            for column in [2, 3, 5, 6, 7]:
                 header.setSectionResizeMode(column, QHeaderView.ResizeMode.Stretch)
 
-            for column in [4, 7, 8, 9, 10]:
+            for column in [4, 8, 9, 10]:
                 header.setSectionResizeMode(column, QHeaderView.ResizeMode.Fixed)
 
             self.toggle_auto_fit_action.setChecked(True)
 
         else:
+            header = self.table.horizontalHeader()
             self.table.setColumnWidth(0, 10)
             header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
 
             header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
 
-            for column in [2, 3, 5, 6]:
+            for column in range(2, 11):
                 header.setSectionResizeMode(column, QHeaderView.ResizeMode.Interactive)
 
-            for column in [4, 7, 8, 9, 10]:
-                header.setSectionResizeMode(column, QHeaderView.ResizeMode.Interactive)
+            self.toggle_auto_fit_action.setChecked(False)
 
     def apply_column_visibility(self):
         show_extensions = self.settings_manager.get("show_extensions", False)

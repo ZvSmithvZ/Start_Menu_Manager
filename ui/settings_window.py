@@ -31,10 +31,10 @@ class SettingsWindow(QDialog):
 
         # layout.addWidget(QLabel("Table Settings"))
 
-        self.auto_fit_checkbox = QCheckBox("Auto Fit Column Widths to Window")
-        self.show_extensions_checkbox = QCheckBox("Show file extensions column")
+        # self.auto_fit_checkbox = QCheckBox("Auto Fit Column Widths to Window")
+        # table_layout.addWidget(self.auto_fit_checkbox)
 
-        table_layout.addWidget(self.auto_fit_checkbox)
+        self.show_extensions_checkbox = QCheckBox("Show file extensions column")
         table_layout.addWidget(self.show_extensions_checkbox)
 
         table_group.setLayout(table_layout)
@@ -71,12 +71,12 @@ class SettingsWindow(QDialog):
 
     def load_settings(self):
 
-        self.auto_fit_checkbox.setChecked(
-            self.settings_manager.get(
-                "auto_fit_column_widths",
-                True,
-            )
-        )
+        # self.auto_fit_checkbox.setChecked(
+        #     self.settings_manager.get(
+        #         "auto_fit_column_widths",
+        #         True,
+        #     )
+        # )
 
         self.show_extensions_checkbox.setChecked(
             self.settings_manager.get(
@@ -94,10 +94,10 @@ class SettingsWindow(QDialog):
 
     def save_settings(self):
 
-        self.settings_manager.set(
-            "auto_fit_column_widths",
-            self.auto_fit_checkbox.isChecked(),
-        )
+        # self.settings_manager.set(
+        #     "auto_fit_column_widths",
+        #     self.auto_fit_checkbox.isChecked(),
+        # )
 
         self.settings_manager.set(
             "show_extensions",
